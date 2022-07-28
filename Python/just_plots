@@ -1,0 +1,298 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Aug 27 09:56:53 2019
+
+@author: cihat
+"""
+import numpy as np
+import pandas as pd
+#import time as tm
+import linecache as gl
+import glob
+import os
+import matplotlib.pyplot as plt
+import platform
+op_sys = platform.system()
+if op_sys == 'Windows':
+    dtdir = 'C:\\Users\\kurt_\\PARAM DATA\\'
+    disr_dt = 'C:\\Users\\kurt_\\Dropbox\\Code\\'
+    _sl = '\\'
+elif op_sys == 'Linux':
+    dtdir = '/home/cihat/programs/gdl/'
+    disr_dt = '/home/cihat/Dropbox/code/'
+    _sl = '/'
+  #%% Plots
+
+
+_pm = ['2575_03277_158_00040', '2825_02941_165_00040']
+_chn = 'Red'
+for pm_id in _pm:
+    file=glob.glob(dtdir+'final{}newpm{}.dat'.format(_sl, pm_id))
+    file_names = []
+    for par in file:
+        param_run = par[par.find('pm'):par.find('.dat')]
+        file_names.append(param_run)
+        q = gl.getline(par, 2)
+        q = q.split()
+        qabs = [float(q[0])]
+        qsca = [float(q[1])]
+        qext = [float(q[2])]
+
+        try:
+            csca = [float(q[3])]
+        except ValueError:
+            print('csca value error',param_run)
+        cabs =[float(q[4])]
+        taus_out = [float(q[5])]
+        taua_out = [float(q[6])]
+
+        eff = {'qa': qabs, 'qs': qsca, 'qe': qext, 'cs': csca, 'ca': cabs, 'taus': taus_out, 'taua': taua_out}
+        vars()[param_run+'_eff'] = pd.DataFrame(eff)
+
+        # Now I will collect scattering matrix data in a data frame
+        data = []
+        for line in range(4, 185):
+            a = gl.getline(par, line)
+            columns = a.split()
+            rw = {}
+            rw['P11'] = columns[0]
+            rw['P12'] = columns[1]
+            rw['P22'] = columns[2]
+            rw['P33'] = columns[3]
+            rw['P34'] = columns[4]
+            rw['P44'] = columns[5]
+
+            data.append(rw)
+
+        # Now Converting to a Dataframe
+        dt = pd.DataFrame(data)
+        del(rw)
+
+        # Let's convert the string values to numeric all at once
+        vars()[param_run+'_mx'] = dt.apply(pd.to_numeric)
+        vars()[param_run+'_mx']['theta'] = np.arange(0, 181)
+
+        # For now I will not convert the data to xarray. I do not see any benefit
+        # doing that other than being able to collect matrix elements and efficien-
+        # ies in the same dataset. Hence, below code block is commented
+
+    #    # Now collecting everything in an xarray dataset
+    #    # Note that PXX are saved as variable, but Qx and g are saved as dimension
+    #    vars()[param_run] = xr.Dataset.from_dataframe(dt)
+    #    vars()[param_run]['qext'] = qext
+    #    vars()[param_run]['qabs'] = qabs
+    #    vars()[param_run]['qsca'] = qsca
+    #    vars()[param_run]['g'] = g
+
+
+os.chdir(dtdir)
+
+
+
+Hyg_Blue = pd.read_pickle(disr_dt+'Hyg_Blue.pkl')
+Hyg_Red = pd.read_pickle(disr_dt+'Hyg_Red.pkl')
+th = Hyg_Blue.theta
+theta = pm2575_03277_158_00040_mx.theta
+with plt.style.context(('seaborn-poster')):
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(18, 12))
+    if _chn == 'Blue':
+        axes[0,0].plot(th[:10],(Hyg_Blue.P11)[:10], label='DISR')
+        axes[0,0].plot( theta[:10], (pm2575_03277_158_00040_mx.P11)[:10], label='Model')
+
+        axes[0,0].set_title('Blue 2575_03277_158_00040')
+        axes[0,0].legend()
+
+        axes[0,1].plot(th, np.log10(Hyg_Blue.P11), label='DISR')
+        axes[0,1].plot(theta, np.log10(pm2575_03277_158_00040_mx.P11), label='Model')
+        axes[0,1].set_ylim(-1.0, 2.8)
+        axes[0,1].set_title('Blue 2575_03277_158_00040')
+        axes[0,1].legend()
+
+        axes[1,0].plot(th[:10],(Hyg_Blue.P11)[:10], label='DISR')
+        axes[1,0].plot( theta[:10], (pm2825_02941_165_00040_mx.P11)[:10], label='Model')
+        axes[1,0].set_title('Blue 2825_02941_165_00040')
+        axes[1,0].legend()
+        #newpm2825_02941_165_00040_mx[65:] = newpm2825_02941_165_00040_mx[65:]*0.8333
+        axes[1,1].plot(th, np.log10(Hyg_Blue.P11), label='DISR')
+        axes[1,1].plot(theta, np.log10(pm2825_02941_165_00040_mx.P11), label='Model')
+        axes[1,1].set_title('Blue 2825_02941_165_00040')
+        axes[1,1].legend()
+    elif _chn == 'Red':
+        axes[0,0].plot(th[:10],(Hyg_Red.P11)[:10], label='DISR')
+        axes[0,0].plot( theta[:10], (pm2575_03277_158_00040_mx.P11)[:10], label='Model')
+        axes[0,0].set_ylim(20, 200)
+
+        axes[0,0].set_title('Red 2575_03277_158_00040')
+        axes[0,0].legend()
+
+        axes[0,1].plot(th, np.log10(Hyg_Red.P11), label='DISR')
+        axes[0,1].plot(theta, np.log10(pm2575_03277_158_00040_mx.P11), label='Model')
+        axes[0,1].set_ylim(-1.0, 2.4)
+        axes[0,1].set_title('Red 2575_03277_158_00040')
+        axes[0,1].legend()
+
+        axes[1,0].plot(th[:10],(Hyg_Red.P11)[:10], label='DISR')
+        axes[1,0].plot( theta[:10], (pm2825_02941_165_00040_mx.P11)[:10], label='Model1700')
+        axes[1,0].set_title('Red 2825_02941_165_00040')
+        axes[0,0].set_ylim(20, 200)
+        axes[1,0].legend()
+        #newpm2825_02941_165_00040_mx[65:] = newpm2825_02941_165_00040_mx[65:]*0.8333
+        axes[1,1].plot(th, np.log10(Hyg_Red.P11), label='DISR')
+        axes[1,1].plot(theta, np.log10(pm2825_02941_165_00040_mx.P11), label='Model')
+        axes[0,1].set_ylim(-1.0, 2.4)
+        axes[1,1].set_title('Red 2825_02941_165_00040')
+        axes[1,1].legend()
+    plt.show()
+    plt.close()
+
+#%% Single plots
+
+
+pm_id = '2200_06240_179_01260'
+_chn = 'Blue'
+sp = pm_id[5:10]
+sp = float(".".join(sp[0:2]) + sp[2:])
+N = int(pm_id[0:4])
+
+n_real = pm_id[11:14]
+n_real = float(".".join(n_real[0:2]) + n_real[2:])
+
+n_img = pm_id[15:20]
+n_img = float(".".join(n_img[0:2]) + n_img[2:])
+
+file=glob.glob(dtdir+'final{}newpm{}.dat'.format(_sl, pm_id))
+file_names = []
+for par in file:
+    param_run = par[par.find('pm'):par.find('.dat')]
+    file_names.append(param_run)
+    q = gl.getline(par, 2)
+    q = q.split()
+    qabs = [float(q[0])]
+    qsca = [float(q[1])]
+    qext = [float(q[2])]
+
+    try:
+        csca = [float(q[3])]
+    except ValueError:
+        print('csca value error',param_run)
+    cabs =[float(q[4])]
+    taus_out = [float(q[5])]
+    taua_out = [float(q[6])]
+
+    eff = {'qa': qabs, 'qs': qsca, 'qe': qext, 'cs': csca, 'ca': cabs, 'taus': taus_out, 'taua': taua_out}
+    vars()[param_run+'_eff'] = pd.DataFrame(eff)
+
+    # Now I will collect scattering matrix data in a data frame
+    data = []
+    for line in range(4, 185):
+        a = gl.getline(par, line)
+        columns = a.split()
+        rw = {}
+        rw['P11'] = columns[0]
+        rw['P12'] = columns[1]
+        rw['P22'] = columns[2]
+        rw['P33'] = columns[3]
+        rw['P34'] = columns[4]
+        rw['P44'] = columns[5]
+
+        data.append(rw)
+
+    # Now Converting to a Dataframe
+    dt = pd.DataFrame(data)
+    del(rw)
+
+    # Let's convert the string values to numeric all at once
+    vars()[param_run+'_mx'] = dt.apply(pd.to_numeric)
+    vars()[param_run+'_mx']['theta'] = np.arange(0, 181)
+
+    # For now I will not convert the data to xarray. I do not see any benefit
+    # doing that other than being able to collect matrix elements and efficien-
+    # ies in the same dataset. Hence, below code block is commented
+
+#    # Now collecting everything in an xarray dataset
+#    # Note that PXX are saved as variable, but Qx and g are saved as dimension
+#    vars()[param_run] = xr.Dataset.from_dataframe(dt)
+#    vars()[param_run]['qext'] = qext
+#    vars()[param_run]['qabs'] = qabs
+#    vars()[param_run]['qsca'] = qsca
+#    vars()[param_run]['g'] = g
+
+
+os.chdir(disr_dt)
+
+
+
+Hyg_Blue = pd.read_pickle(disr_dt+'Hyg_Blue.pkl')
+Hyg_Red = pd.read_pickle(disr_dt+'Hyg_Red.pkl')
+th = Hyg_Blue.theta
+theta = eval(f'pm{pm_id}_mx').theta
+with plt.style.context(('seaborn-poster')):
+    fig, axes = plt.subplots()
+    axes.plot(th, np.log10(eval(f'Hyg_{_chn}').P11), label='DISR')
+    axes.plot(theta, np.log10(eval(f'pm{pm_id}_mx').P11),marker='o',alpha=0.4, label='Model')
+    axes.set_ylim(-1, 2.7)
+    axes.set_title(f'{_chn} Best Fitting Aggregate')
+    axes.legend()
+    plt.annotate(f'N = {N}', xy=(0.848,0.70), xycoords = ('figure fraction'), fontsize = (14), color = 'purple')
+    plt.annotate('Xm = {:.2f}'.format(sp), xy=(0.848,0.67), xycoords = ('figure fraction'), fontsize = (14), color = 'purple')
+    plt.annotate('nr = {:.2f}'.format(n_real), xy=(0.848,0.64), xycoords = ('figure fraction'), fontsize = (14), color = 'purple')
+    plt.annotate('ni = {:.3f}'.format(n_img), xy=(0.848,0.61), xycoords = ('figure fraction'), fontsize = (14), color = 'purple')
+
+
+    plt.show()
+    plt.close()
+#%%
+Hyg_Blue = pd.read_pickle(disr_dt+'Hyg_Blue.pkl')
+Hyg_Red = pd.read_pickle(disr_dt+'Hyg_Red.pkl')
+th = Hyg_Blue.theta
+theta = np.arange(0, 181)
+
+with plt.style.context(('seaborn-poster')):
+    fig = plt.figure()
+    for pm_id in Blue_plotting.Mdl[0:500]:
+
+        with open(f'{dtdir}final/new{pm_id}.dat') as par:
+            pm = list()
+            for i,line in enumerate(par):
+                if i==1:
+                    dline = line.strip()
+                    dline = dline.split()
+                    qabs = float(dline[0])
+                    qsca = float(dline[1])
+                    qext = float(dline[2])
+                    csca = float(dline[3])
+                    cabs = float(dline[4])
+
+                elif i >=3 and i <= 184:
+
+                    columns = line.strip()
+                    columns = columns.split()
+                    rw = {}
+                    rw['P11'] = columns[0]
+                    rw['P12'] = columns[1]
+                    rw['P22'] = columns[2]
+                    rw['P33'] = columns[3]
+                    rw['P34'] = columns[4]
+                    rw['P44'] = columns[5]
+
+                    pm.append(rw)
+
+
+                else:
+                    continue
+                                # Now Converting to a Dataframe
+            pm = pd.DataFrame(pm)
+            pm = pm.apply(pd.to_numeric)
+            sp = pm_id[7:12]
+            sp = float(".".join(sp[0:2]) + sp[2:])
+            N = int(pm_id[pm_id.find('pm')+2:pm_id.find('_')])
+            n_real = pm_id[13:16]
+            n_real = float(".".join(n_real[0:2]) + n_real[2:])
+            n_img = pm_id[17:22]
+            n_img = float(".".join(n_img[0:2]) + n_img[2:])
+
+            ax1 = fig.add_axes([0,0,1,1])
+
+            ax.plot(theta, (np.log10(pm.P11)), linewidth=0.1, alpha=1)
+    ax.plot(th, np.log10(Hyg_Blue.P11))

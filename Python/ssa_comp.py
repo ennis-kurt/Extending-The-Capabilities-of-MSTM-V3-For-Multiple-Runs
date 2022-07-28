@@ -1,0 +1,333 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Aug 28 16:21:13 2019
+
+@author: cihat
+"""
+
+import numpy as np
+import pandas as pd
+#import time as tm
+import linecache as gl
+import glob
+import os
+from scipy.stats import ks_2samp
+from scipy.stats import anderson_ksamp
+from scipy.stats import linregress
+import platform
+from multiprocessing import Pool, Process
+import matplotlib.pyplot as plt
+import seaborn as sn
+from functools import partial
+op_sys = platform.system()
+if op_sys == 'Windows':
+    dtdir = 'C:\\Users\\kurt_\\PARAM DATA\\'
+    disr_dt = 'C:\\Users\\kurt_\\Dropbox\\Code\\'
+    _sl = '\\'
+elif op_sys == 'Linux':
+    dtdir = '/home/cihat/programs/gdl/'
+    disr_dt = '/home/cihat/Dropbox/code/'
+    _sl = '/'
+
+os.chdir(dtdir)
+
+#%%
+
+Blue = pd.read_pickle(disr_dt+'Blue.pkl')
+Red = pd.read_pickle(disr_dt+'Red.pkl')
+Hyg_Blue = pd.read_pickle(disr_dt+'Hyg_Blue.pkl')
+Hyg_Red = pd.read_pickle(disr_dt+'Hyg_Red.pkl')
+ssa = pd.read_pickle(disr_dt+'SSA.pkl')
+def ssa_comp (wl, pm_id):
+
+    if wl == 'Blue':
+        lmd=0.4909
+    elif wl == 'Red':
+        lmd=0.9348
+    Hyg = pd.read_pickle(disr_dt+'Hyg_'+wl+'.pkl')
+
+    par = f'{dtdir}final{_sl}new{pm_id}.dat'
+    # Reading the model output
+
+
+    q = gl.getline(par, 2)
+    q = q.split()
+    qabs = [float(q[0])]
+    qsca = [float(q[1])]
+    qext = [float(q[2])]
+
+    try:
+        csca = [float(q[3])]
+    except ValueError:
+        print('csca value error',pm_id)
+    cabs =[float(q[4])]
+    taus_out = [float(q[5])]
+    taua_out = [float(q[6])]
+
+    eff = {'qa': qabs, 'qs': qsca, 'qe': qext, 'cs': csca, 'ca': cabs, 'taus': taus_out, 'taua': taua_out}
+
+    pm_eff = pd.DataFrame(eff)
+
+    w0mdl = pm_eff.qs[0]/pm_eff.qe[0]
+    aw = {}
+    for _alt in ['200', '80new']:
+        w0alt = f'w0{_alt}'
+
+
+        if wl == 'Blue':
+            w0 = ssa[ssa.lmd == 491 ][w0alt].values[0]
+            _lmd = 0.4909 # extra dec. just to be more accurate for monomer_size
+        elif wl == 'Red':
+            w0 = ssa[ssa.lmd == 934 ][w0alt].values[0]
+            _lmd = 0.9348 # extra dec. just to be more accurate for monomer_size
+
+        rel_err = abs(w0 - w0mdl )/w0
+
+        aw[f'{w0alt}_Rerr'] = rel_err
+
+
+    return aw
+
+
+if __name__ == '__main__':
+    for wl in ['Blue', 'Red']:
+        p = Pool(8)
+        func = partial(ssa_comp, wl)
+
+        _dt = p.map(func, eval(wl).Mdl)
+        _dt = pd.DataFrame(_dt)
+        eval(wl).reset_index(inplace=True)
+        eval(wl).drop('index', axis=1, inplace=True)
+        for i in _dt:
+            print(i)
+            print(np.size(_dt[i]))
+            eval(wl)[i] = _dt[i]
+
+#    vars()[wl+'144'] = eval(wl)[eval(wl)['w0144_Rerr'] <= 0.05]
+#    vars()[wl+'80'] = eval(wl)[eval(wl)['w080_Rerr'] <= 0.05]
+#Blue.to_pickle(disr_dt+'Blue.pkl')
+#Red.to_pickle(disr_dt+'Red.pkl')
+
+            #%%
+
+def ssa_comp (wl, pm_id):
+
+    if wl == 'Blue':
+        lmd=0.4909
+    elif wl == 'Red':
+        lmd=0.9348
+    Hyg = pd.read_pickle(disr_dt+'Hyg_'+wl+'.pkl')
+
+
+    # Reading model output
+
+
+    par = f'{dtdir}final{_sl}new{pm_id}.dat'
+    # Reading the model output
+
+
+    q = gl.getline(par, 2)
+    q = q.split()
+    qabs = [float(q[0])]
+    qsca = [float(q[1])]
+    qext = [float(q[2])]
+
+    try:
+        csca = [float(q[3])]
+    except ValueError:
+        print('csca value error',pm_id)
+    cabs =[float(q[4])]
+    taus_out = [float(q[5])]
+    taua_out = [float(q[6])]
+
+    eff = {'qa': qabs, 'qs': qsca, 'qe': qext, 'cs': csca, 'ca': cabs, 'taus': taus_out, 'taua': taua_out}
+
+    pm_eff = pd.DataFrame(eff)
+
+    w0mdl = pm_eff.qs[0]/pm_eff.qe[0]
+    aw = {}
+    for _alt in ['200', '80','80new', '144']:
+        w0alt = f'w0{_alt}'
+
+
+        if wl == 'Blue':
+            w0 = ssa[ssa.lmd == 491 ][w0alt].values
+            _lmd = 0.4909 # extra dec. just to be more accurate for monomer_size
+        elif wl == 'Red':
+            w0 = ssa[ssa.lmd == 934 ][w0alt].values
+            _lmd = 0.9348 # extra dec. just to be more accurate for monomer_size
+
+        rel_err = abs(w0 - w0mdl )/w0
+
+        print(f'{w0alt}_Rerr')
+        aw[f'{w0alt}_Rerr'] = rel_err
+    print(aw)
+
+    return aw
+for wl in ['Blue', 'Red']:
+    ssa_com(wl, )
+_dt = []
+#for wl in ['Blue', 'Red']:
+#    for pm_id in eval(wl).Mdl:
+#        _dt.append(ssa_comp(wl, pm_id))
+
+#%%  Only for BLUE-80km USe the next cell because, the next cell first calculates wl_flt which provides
+# better constraint on the size of the aggregate. Then in the next step it filters
+# the model runs based SSA constraint on nr, ni among the models that passes the
+# the aggregates size filter.
+Blue = pd.read_pickle(disr_dt+'Blue.pkl')
+Red = pd.read_pickle(disr_dt+'Red.pkl')
+Hyg_Blue = pd.read_pickle(disr_dt+'Hyg_Blue.pkl')
+Hyg_Red = pd.read_pickle(disr_dt+'Hyg_Red.pkl')
+ssa = pd.read_pickle(disr_dt+'SSA.pkl')
+s=0
+k=0
+from pathlib import Path
+dst = 'C:\\Users\\kurt_\\PARAM DATA\\final0\\'
+src = 'D:\\final\\'
+for wl in ['Blue', 'Red']:
+    for alt in [ '80new', '200']:
+
+#        vars()[wl+alt] = eval(wl)[eval(wl)[f'w0{alt}_Rerr'] <= 0.05]
+#        vars()[wl+alt] = eval(wl+alt)[eval(wl+alt)['Rel_err_b'] <= 0.155]
+        if wl == 'Blue' and alt == '80new':
+            # First Constrain the N and SP from the DISR Phase
+            vars()[f'{wl}_flt'] = eval(wl)[eval(wl)['Rel_err_b'] < 0.15]
+            vars()[f'{wl}_flt']['Ragg'] = eval(f'{wl}_flt')['Rm']*eval(f'{wl}_flt')['N']**(1.0/3.)
+            eval(f'{wl}_flt').reset_index(inplace=True)
+            eval(f'{wl}_flt').drop('index', axis=1, inplace=True)
+
+            # Now constraint from SSA in the limits of N obtained in the previous step
+            vars()[wl+alt] = eval(wl)[eval(wl)[f'w0{alt}_Rerr'] <= 0.05]
+            vars()[wl+alt] = eval(wl+alt)[eval(wl+alt)['Rel_err_b'] <= 0.22]
+            vars()[wl+alt]['Ragg'] = eval(wl+alt)['Rm']*eval(wl+alt)['N']**(1.0/3.)
+            vars()[wl+alt] = eval(wl+alt)[(eval(wl+alt).N <= np.max(eval(f'{wl}_flt').N)) & (eval(wl+alt).N >= np.min(eval(f'{wl}_flt').N))]
+            vars()[wl+alt]['filter'] = eval(wl+alt)['Rel_err_fw']*eval(wl+alt)['Rel_err_b']*eval(wl+alt)[f'w0{alt}_Rerr']
+            eval(wl+alt).reset_index(inplace=True)
+            eval(wl+alt).drop('index', axis=1, inplace=True)
+            continue
+        elif wl == 'Blue' and alt == '200':
+            vars()[wl+alt] = eval(wl)[eval(wl)[f'w0{alt}_Rerr'] <= 0.05]
+            vars()[wl+alt] = eval(wl+alt)[eval(wl+alt)['Rel_err_b'] <= 0.15]
+        else:
+            vars()[wl+alt] = eval(wl)[eval(wl)[f'w0{alt}_Rerr'] <= 0.05]
+            vars()[wl+alt] = eval(wl+alt)[eval(wl+alt)['Rel_err_b'] <= 0.11]
+
+
+
+#            vars()[wl+alt] = eval(wl+alt)[eval(wl+alt)['Rm'] > 0.035]
+
+        vars()[wl+alt]['filter'] = eval(wl+alt)['Rel_err_fw']*eval(wl+alt)['Rel_err_b']*eval(wl+alt)[f'w0{alt}_Rerr']
+        vars()[wl+alt]['Ragg'] = eval(wl+alt)['Rm']*eval(wl+alt)['N']**(1.0/3.)
+        eval(wl+alt).reset_index(inplace=True)
+        eval(wl+alt).drop('index', axis=1, inplace=True)
+#        vars()[wl+alt]['Rel_err_fw'] = np.sqrt(eval(wl+alt)['MSEf']/(Hyg_Blue.P11[0]**2))
+#        vars()[wl+alt]['Rel_err_fw'] = np.sqrt(eval(wl+alt)['MSEf']/(Hyg_Blue.P11[0]**2))
+
+
+#        for i in eval(wl+alt).Mdl:
+#            try:
+#                copy2(f'{src}new{i}.dat', f'{dst}{i}.dat')
+#            except:
+#                s+=1
+#        for i in eval(wl+alt).Mdl:
+#
+#            my_file = Path(f'{src}new{i}.dat')
+#            if my_file.is_file():
+#                k+=1
+#print(f'Number of missing file is {s}')
+#print(f'Number of file available is {k}')
+
+
+#%% NEW CONSTRAINTS - RAGG AND n INDEPENDENTLY CONSTRAINED
+        #USe the this cell instead of the previous one because, this cell first calculates wl_flt which provides
+# better constraint on the size of the aggregate. Then in the next step it filters
+# the model runs based SSA constraint on nr, ni among the models that passes the
+# the aggregates size filter.
+Blue = pd.read_pickle(disr_dt+'Blue.pkl')
+Red = pd.read_pickle(disr_dt+'Red.pkl')
+Hyg_Blue = pd.read_pickle(disr_dt+'Hyg_Blue.pkl')
+Hyg_Red = pd.read_pickle(disr_dt+'Hyg_Red.pkl')
+ssa = pd.read_pickle(disr_dt+'SSA.pkl')
+
+for wl in ['Blue', 'Red']:
+    if wl == 'Red':
+          # Blue constraints Rm not Red. Thus anything outside 0.35<Rm<0.55 removed
+
+        vars()[f'{wl}_flt'] = eval(wl)[eval(wl)['Rel_err_b'] < 0.11]
+#        vars()[f'{wl}_flt'] = eval(f'{wl}_flt')[eval(f'{wl}_flt').Rm >= 0.035]
+
+    else:
+
+        vars()[f'{wl}_flt'] = eval(wl)[eval(wl)['Rel_err_b'] < 0.15]
+    vars()[f'{wl}_flt']['filter'] = eval(f'{wl}_flt')['Rel_err_fw']*eval(f'{wl}_flt')['Rel_err_b']
+    vars()[f'{wl}_flt']['Ragg'] = eval(f'{wl}_flt')['Rm']*eval(f'{wl}_flt')['N']**(1.0/3.)
+    eval(f'{wl}_flt').reset_index(inplace=True)
+    eval(f'{wl}_flt').drop('index', axis=1, inplace=True)
+#    vars()[wl]['Ragg'] = eval(wl)['Rm']*eval(wl)['N']**(1.0/3.)
+
+for wl in ['Blue', 'Red']:
+    for alt in [ '80new', '200']:
+        vars()[wl+alt] = eval(wl)[eval(wl)[f'w0{alt}_Rerr'] <= 0.05]
+        if wl == 'Blue' and alt == '80new':
+            vars()[wl+alt] = eval(wl+alt)[eval(wl+alt)[f'Rel_err_b'] <= 0.25]
+        else:
+             vars()[wl+alt] = eval(wl+alt)[eval(wl+alt)[f'Rel_err_b'] <= 0.15]
+
+        vars()[wl+alt]['Ragg'] = eval(wl+alt)['Rm']*eval(wl+alt)['N']**(1.0/3.)
+        vars()[wl+alt] = eval(wl+alt)[(eval(wl+alt).N <= np.max(eval(f'{wl}_flt').N)) & (eval(wl+alt).N >= np.min(eval(f'{wl}_flt').N))]
+        vars()[wl+alt]['filter'] = eval(wl+alt)['Rel_err_fw']*eval(wl+alt)['Rel_err_b']*eval(wl+alt)[f'w0{alt}_Rerr']
+        eval(wl+alt).reset_index(inplace=True)
+        eval(wl+alt).drop('index', axis=1, inplace=True)
+#%%
+Flt = [Blue_flt, Red_flt]
+Flt = pd.concat(Flt)
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(18, 12), tight_layout=True)
+lst = [ 'N','Rm','Ragg']
+for j,_include in enumerate(lst):
+    j = j+1
+    _ids=[]
+    _vls=[]
+
+    for i in Flt:
+        if i in _include:
+            _vls.append(i)
+        else:
+            _ids.append(i)
+
+    Flt = pd.melt(Flt, id_vars = _ids, value_vars = _vls, value_name='Vars')
+    sns.set(style="whitegrid")
+
+    axes[j] = sns.violinplot(x="variable", y="Vars", hue="Wave_Length", data=Flt, split=True,
+                   inner="quart")
+plt.show()
+
+#%%
+Flt = [Blue200, Red200]
+Flt = pd.concat(Flt, sort=False)
+_x = pd.Series([' ']*np.size(Flt.Mdl))
+Flt[' '] = _x
+_ids=[]
+_vls=[]
+_include = [ 'N', 'Rm', 'Ragg']
+for i in Flt:
+    if i in _include:
+        _vls.append(i)
+    else:
+        _ids.append(i)
+        sn.set(style="whitegrid")
+        sn.set_context("paper", font_scale=2)
+Flt = pd.melt(Flt, id_vars = _ids, value_vars = _vls, value_name='Vars')
+g = sn.catplot(x=" ", y="Vars", hue="Wave_Length", data=Flt, kind="violin", split=True,
+               col='variable', sharex=False, sharey=False , palette=['#87CEFA','#FF6347'], inner=None)
+
+#g.map(sns.violinplot,x="variable", y="Vars", hue="Wave_Length", data=Flt, split=True,
+#                   inner="quart")margin_titles=True
+#%%
+
+for wl in ['Blue', 'Red']:
+    for alt in ['144', '80', '80new', '200']:
+        vars()[f'{wl}{alt}'] = pd.read_pickle(f'{disr_dt}{wl}{alt}.pkl')
+    vars()[wl] = pd.read_pickle(f'{disr_dt}{wl}.pkl')
+    eval(wl)['Ragg'] = eval(wl).Rm * eval(wl).N**(1.0/3.)
