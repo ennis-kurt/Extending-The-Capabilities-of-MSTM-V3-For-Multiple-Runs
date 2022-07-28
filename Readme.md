@@ -1,4 +1,5 @@
-# T-Matrix-Titan
+# Extending The Capabilities of MSTM-V3 For Multiple-Runs
+
 This repository contains the output files of hundreds of Multi Sphere T-Matrix (MSTM-v3) runs. The purpose of these runs is to calculate the properties of the haze particle in Titan's Atmosphere. Therefore, the parameters of the runs are selected within the current estimates of the Titan's haze particle properties 
 
 MSTM is a FORTRAN-90 code for calculating the time–harmonic electromagnetic scattering properties of a group of spheres. The algorithm applies the multiple sphere  matrix method, and the results can be considered exact to the truncation error of the vector spherical wave function (VSWF) expansions used to represent the fields.
