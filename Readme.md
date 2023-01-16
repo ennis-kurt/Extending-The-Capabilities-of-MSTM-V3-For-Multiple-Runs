@@ -1,4 +1,4 @@
-# Extending The Capabilities of MSTM-V3 For Multiple-Runs
+# Automated Multi-Run Execution of the Multi Sphere T-Matrix (MSTM-v3) Code
 ## Overview 
 
 This repository contains the output files of hundreds of Multi Sphere T-Matrix (MSTM-v3) runs. The purpose of these runs is to calculate the properties of the haze particles in Titan's atmosphere. Therefore, the parameters of the runs are selected within the current estimates of the Titan's haze particle properties.
